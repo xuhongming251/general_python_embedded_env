@@ -27,19 +27,6 @@ jobs:
         uses: actions/checkout@v4
 
 
-      # 设置Python版本
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.${{ inputs.python_minor }}.${{ inputs.python_patch }}
-
-      # 打印输入消息
-      - name: Print Input Vars
-        shell: bash
-        run: |
-          echo 'Input variable list:'
-          echo "force_update_deps:"
-          echo ${{ inputs.force_update_deps }}
-
       # 下载Python 二进制文件，并修改引入相对ComfyUI的目录
       - name: Download Python Bin For embed
         shell: bash
@@ -76,6 +63,7 @@ jobs:
             mkdir pkg_dir
             mv python_embeded pkg_dir
             mv "install_deps.bat" pkg_dir
+            mv "cmd_demo.txt" pkg_dir
             echo "current path:"
             pwd
             ls -lh .
@@ -91,7 +79,7 @@ jobs:
             # 获取当前北京时间，格式化为年月日
             current_date=$(date +'%Y%m%d' -u -d "+8 hours")
             # 创建带有时间戳的压缩包
-            "C:\Program Files\7-Zip\7z.exe" a -tzip "python_embeded_3${{ inputs.python_minor }}.zip" pkg_dir
+            "C:\Program Files\7-Zip\7z.exe" a -tzip "python_embeded_3${{ inputs.python_minor }}.zip" pkg_dir/
             echo "UPLOAD_FILE_NAME=python_embeded_3${{ inputs.python_minor }}.zip" >> $GITHUB_ENV
             echo "current path:"
             pwd

@@ -59,7 +59,7 @@ def uninstall_package(package_name):
         print(process.stdout)
 
 def main_menu():
-    print_header("Python Package Management Tool For Current ComfyUI")
+    print_header("Python Package Management Tool For Current Env")
     check_python_environment()
     
     while True:
