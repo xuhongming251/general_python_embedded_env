@@ -1,0 +1,113 @@
+name: "Gen Python Embeded Env"
+
+on:
+  workflow_dispatch:
+    inputs:
+
+      python_minor:
+        description: 'python minor version'
+        required: true
+        type: string
+        default: "12"
+
+      python_patch:
+        description: 'python patch version'
+        required: true
+        type: string
+        default: "7"
+
+jobs:
+  build_dependencies:
+    runs-on: windows-latest
+
+    steps:
+      
+      # clone 当前仓库
+      - name: Clone Current Repo
+        uses: actions/checkout@v4
+
+
+      # 设置Python版本
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.${{ inputs.python_minor }}.${{ inputs.python_patch }}
+
+      # 打印输入消息
+      - name: Print Input Vars
+        shell: bash
+        run: |
+          echo 'Input variable list:'
+          echo "force_update_deps:"
+          echo ${{ inputs.force_update_deps }}
+
+      # 下载Python 二进制文件，并修改引入相对ComfyUI的目录
+      - name: Download Python Bin For embed
+        shell: bash
+        run: |
+          echo "current path:"
+          pwd
+          ls -lh .
+          curl https://www.python.org/ftp/python/3.${{ inputs.python_minor }}.${{ inputs.python_patch }}/python-3.${{ inputs.python_minor }}.${{ inputs.python_patch }}-embed-amd64.zip -o python_embeded.zip
+          unzip python_embeded.zip -d python_embeded
+          cd python_embeded
+          echo "begin down pip.py"
+          curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+          ./python.exe get-pip.py
+
+          ./python.exe -m pip install colorama
+
+          echo 'import site' >> ./python3${{ inputs.python_minor }}._pth
+          sed -i '1i../ComfyUI' ./python3${{ inputs.python_minor }}._pth
+          
+          mv ./../install_deps.py .
+
+          echo "current path:"
+          pwd
+          echo "python embed files:"
+          ls -lh .
+          cd ..
+          echo "current path:"
+          pwd
+          ls -lh .
+
+      - name: Prepare Pkg Files
+        shell: bash
+        run: |
+            mkdir pkg_dir
+            mv python_embeded pkg_dir
+            mv "install_deps.bat" pkg_dir
+            echo "current path:"
+            pwd
+            ls -lh .
+            echo "pkg_dir files:"
+            pwd
+            ls -lh ./pkg_dir
+      
+      - name: ZIP Pkg Files
+        shell: bash
+        run: |
+            echo "current path:"
+            pwd
+            # 获取当前北京时间，格式化为年月日
+            current_date=$(date +'%Y%m%d' -u -d "+8 hours")
+            # 创建带有时间戳的压缩包
+            "C:\Program Files\7-Zip\7z.exe" a -tzip "python_embeded_3${{ inputs.python_minor }}.zip" pkg_dir
+            echo "UPLOAD_FILE_NAME=python_embeded_3${{ inputs.python_minor }}.zip" >> $GITHUB_ENV
+            echo "current path:"
+            pwd
+            ls -lh .
+
+      - name: Prepare ossutil tool
+        uses: yizhoumo/setup-ossutil@v2
+        with:
+          ossutil-version: '1.7.18'
+          endpoint: ${{ secrets.ALIYUN_OSS_ENDPOINT }}
+          access-key-id: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+          access-key-secret: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+
+      - name: Upload OSS
+        shell: bash
+        run: |
+          ossutil rm "oss://mycomfyui/python_embeded/$UPLOAD_FILE_NAME"
+          ossutil cp "$UPLOAD_FILE_NAME" "oss://mycomfyui/python_embeded/"
+
